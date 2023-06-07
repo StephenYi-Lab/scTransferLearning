@@ -1,14 +1,20 @@
-
-Data/count_matrix_barcodes.tsv
-Data/count_matrix_genes.tsv
-Data/count_matrix_sparse.mtx
-Data/count_matrix_sparse.mtx.tar.gz
-Data/GSE150949_pooled_watermelon.count.matrix.csv.gz
-Data/GSE150949_pooled_watermelon.metadata.matrix.csv.gz
-Data/GSM4285803_scRNA_metaInfo.csv.gz
-Data/GSM4285803_scRNA_RawCounts.csv.gz
+Data/CCLE_NP24.2009_Drug_data_2012.02.20.csv
+Data/GSE150949_pooled_watermelon.count.matrix.csv
+Data/GSE150949_pooled_watermelon.metadata.matrix.csv
+Data/GSE176078_Wu_etal_2021_BRCA_scRNASeq.tar.gz
+Data/GSM4285803_scRNA_metaInfo.csv
+Data/GSM4285803_scRNA_RawCounts.csv
 Data/hsaENSEMBL-GENES.txt
+Data/input_tumorComposition.rds
 Data/MCF7.csv
-Data/metadata.csv
-Data/Original screen_All tissues_fitted data.csv
+Data/'Original screen_All tissues_fitted data.csv'
 Data/RAW.UMI.counts.BC.cell.lines.rds
+Data/SCP542/expression/CPM_data.txt
+Data/SCP542/metadata/Metadata.txt
+Data/Wu_etal_2021_BRCA_scRNASeq/count_matrix_barcodes.tsv
+Data/Wu_etal_2021_BRCA_scRNASeq/count_matrix_sparse.mtx
+Data/Wu_etal_2021_BRCA_scRNASeq/count_matrix_genes.tsv
+Data/Wu_etal_2021_BRCA_scRNASeq/metadata.csv
+Data/stable_id_lookup.txt
+Code/combined_data.rdata
+Testing/.*

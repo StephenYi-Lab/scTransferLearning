@@ -30,7 +30,7 @@ library(pvclust)
 # }
 source('https://raw.githubusercontent.com/dosorio/utilities/master/data.frame2matrix.R')
 
-ENSEMBL <- read.table('../Data/hsaENSEMBL-GENES.txt', sep = '\t', header = TRUE)
+ENSEMBL <- read_csv('../Data/hsaENSEMBL-GENES.txt')
 ENSEMBL <- ENSEMBL[ENSEMBL$Gene.name != '',]
 GENEID <- ENSEMBL$Gene.name
 names(GENEID) <- ENSEMBL$Gene.stable.ID
@@ -61,10 +61,10 @@ clBRCA <- buildReference(
   d = 50, save_uwot_path = 'umapBRCA')
 
 
-query <- readMM('../Data/count_matrix_sparse.mtx')
-rownames(query) <- readLines('../Data/count_matrix_genes.tsv')
-colnames(query) <- readLines('../Data/count_matrix_barcodes.tsv')
-queryMetadata <- read.csv('../Data/metadata.csv', row.names = 1)
+query <- readMM('../Data/Wu_etal_2021_BRCA_scRNASeq/count_matrix_sparse.mtx')
+rownames(query) <- readLines('../Data/Wu_etal_2021_BRCA_scRNASeq/count_matrix_genes.tsv')
+colnames(query) <- readLines('../Data/Wu_etal_2021_BRCA_scRNASeq/count_matrix_barcodes.tsv')
+queryMetadata <- read.csv('../Data/Wu_etal_2021_BRCA_scRNASeq/metadata.csv', row.names = 1)
 
 DC <- pbsapply(unique(queryMetadata$orig.ident), function(Donor){
   rowSums(query[,grepl(Donor, colnames(query))])

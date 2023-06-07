@@ -1,4 +1,4 @@
-library(ggplot2)
+library(tidyverse)
 library(ggrepel)
 library(circlize)
 library(patchwork)
@@ -14,8 +14,13 @@ cellLineType$TNBC <- c('JIMT1', 'BT20', 'HDQP1', 'CAL851', 'MDAMB231', 'HCC70',
                        'HCC1599', 'CAL51', 'HCC1937', 'CAL120', 'HCC38', 'MDAMB468', 'HCC1806',
                        'BT549', 'HCC2157', 'HCC1954', 'HCC1187', 'HCC1143', 'HCC1395', 'MDAMB436')
 
+
 iData <- read.csv('../Data/Original screen_All tissues_fitted data.csv')
-iData <- iData[iData$Tissue == 'Breast',]
+
+
+drug_combo_cell_lines <- unique(iData$CELL_LINE_NAME)
+
+
 iData$CELL_LINE_NAME <- toupper(gsub('-','',iData$CELL_LINE_NAME))
 
 cancerSubtypes <- read.csv('../Results/F4.csv', row.names = 1)
@@ -25,51 +30,80 @@ patientComposition <- read.csv('../Results/F3C.csv', row.names = 1)
 CID44971 <- patientComposition$proportion[patientComposition$donor == 'CID44971']
 names(CID44971) <- patientComposition$cellLine[patientComposition$donor == 'CID44971']
 
-findDrugCombinations <- function(iData, tumorComposition, plotTitle = NA, lSize = 2.2, nLabels = 5, outFile){
-  tumorComposition <- tumorComposition[tumorComposition != 0]
-  fData <- iData[iData$CELL_LINE_NAME %in% names(tumorComposition),]
-  fData$COMB <- paste0(fData$ANCHOR_CONC, ' ', fData$ANCHOR_NAME, ' + ', fData$LIBRARY_CONC, ' ', fData$LIBRARY_NAME)
-  fData$COMB_COMP <- paste0(fData$ANCHOR_NAME, ' + ', fData$LIBRARY_NAME)
-  fData <- split(fData, fData$CELL_LINE_NAME)
-  for(i in seq_along(fData)){
-    fData[[i]]$SYNERGY_DELTA_EMAX <- fData[[i]]$SYNERGY_DELTA_EMAX * tumorComposition[fData[[i]]$CELL_LINE_NAME]
+findDrugCombinations <- function(iData, # drug combination data
+                                 tumorComposition, # get linear combination of cell lines
+                                                   # named character vector
+                                                   # tumorComposition <- CID44971
+                                 plotTitle = NA,
+                                 lSize = 2.2,
+                                 nLabels = 5,
+                                 outFile){
+  
+  # drug combination prediction
+  {
+    tumorComposition <- tumorComposition[tumorComposition != 0]
+    fData <- iData[iData$CELL_LINE_NAME %in% names(tumorComposition),]
+    fData$COMB <- paste0(fData$ANCHOR_CONC, ' ', fData$ANCHOR_NAME, ' + ', fData$LIBRARY_CONC, ' ', fData$LIBRARY_NAME)
+    fData$COMB_COMP <- paste0(fData$ANCHOR_NAME, ' + ', fData$LIBRARY_NAME)
+    fData <- split(fData, fData$CELL_LINE_NAME)
+    for(i in seq_along(fData)){
+      fData[[i]]$SYNERGY_DELTA_EMAX <- fData[[i]]$SYNERGY_DELTA_EMAX * tumorComposition[fData[[i]]$CELL_LINE_NAME]
+    }
+    fData <- do.call(rbind.data.frame, fData)
+    
+    cDrugs <- unlist(lapply(split(fData$SYNERGY_DELTA_EMAX, fData$COMB_COMP), mean))
+    fDrugs <- unlist(lapply(split(fData$CELL_LINE_NAME, fData$COMB_COMP), function(X){sum(tumorComposition[unique(X)])}))
+    
+    rmseComb <- unlist(lapply(split(fData$SYNERGY_RMSE, fData$COMB_COMP), mean))
+    rDrugs <- (cDrugs * fDrugs)/rmseComb
   }
-  fData <- do.call(rbind.data.frame, fData)
-  cDrugs <- unlist(lapply(split(fData$SYNERGY_DELTA_EMAX, fData$COMB_COMP), mean))
-  fDrugs <- unlist(lapply(split(fData$CELL_LINE_NAME, fData$COMB_COMP), function(X){sum(tumorComposition[unique(X)])}))
-  rmseComb <- unlist(lapply(split(fData$SYNERGY_RMSE, fData$COMB_COMP), mean))
-  rDrugs <- (cDrugs * fDrugs)/rmseComb
-  B <- abs(sapply(1:1e3, function(X){sample(rDrugs, replace = TRUE)}))
-  P <- sapply(abs(rDrugs), function(X){mean(X <= B)})
-  colFun <- circlize::colorRamp2(c(min(rDrugs),0, max(rDrugs)), colors = c('gray90','gray80', 'red'))
-  df <- data.frame(sActivity = cDrugs*fDrugs, P = P, id = names(cDrugs))
-  df$id[!df$id %in% names(sort(rDrugs, decreasing = TRUE)[seq_len(nLabels)])] <- NA
-  dPCH <- ifelse(((df$sActivity > 0) & (df$P < 0.05)),8,16)
-  df$sActivity <- df$sActivity/max(abs(df$sActivity))
-  write.csv(df, outFile)
-  n = sum(df$sActivity > 0)
-  oPlot <- ggplot(df, aes(sActivity, -log10(P), label = id)) +
-    geom_point(color = colFun(rDrugs), cex = 0.5, pch = dPCH) +
-    geom_text_repel(min.segment.length = 0,
-                    size = lSize,
-                    bg.color = 'white',
-                    segment.size = 0.1,
-                    #nudge_x = .15,
-                    box.padding = 0.25,
-                    seed = 123,
-                    max.time = 1,
-                    max.iter = Inf
-                    #nudge_y = 0.1,
-                    #segment.curvature = -0.15
-                    #segment.ncp = 3,
-                    #segment.angle = 5
-                    ) +
-    theme_bw() +
-    xlab('Activity Score') +
-    ylab(parse(text = '-log[10]~(P[Bootstrap])')) +
-    labs(title = plotTitle, subtitle = parse(text = paste0('italic(n)==',n,'~Synergistic~Drug~Combinations'))) +
-    xlim(c(0, max(df$sActivity))) +
-    theme(plot.title = element_text(face = 2), plot.subtitle = element_text(size = 7))
+  
+  # output files
+  {
+    # pvalue calc
+    B <- abs(sapply(1:1e3, function(X){sample(rDrugs, replace = TRUE)}))
+    P <- sapply(abs(rDrugs), function(X){mean(X <= B)})
+    # make utput files
+    df <- data.frame(sActivity = cDrugs*fDrugs, P = P, id = names(cDrugs))
+    df$id[!df$id %in% names(sort(rDrugs, decreasing = TRUE)[seq_len(nLabels)])] <- NA
+    df$sActivity <- df$sActivity/max(abs(df$sActivity))
+    
+    write.csv(df, outFile)
+  }
+  
+  
+  # plotting
+  {
+    dPCH <- ifelse(((df$sActivity > 0) & (df$P < 0.05)),8,16)
+    colFun <- circlize::colorRamp2(c(min(rDrugs),0, max(rDrugs)), colors = c('gray90','gray80', 'red'))
+    n = sum(df$sActivity > 0)
+    
+    oPlot <- ggplot(df, aes(sActivity, -log10(P), label = id)) +
+      geom_point(color = colFun(rDrugs), cex = 0.5, pch = dPCH) +
+      geom_text_repel(min.segment.length = 0,
+                      size = lSize,
+                      bg.color = 'white',
+                      segment.size = 0.1,
+                      #nudge_x = .15,
+                      box.padding = 0.25,
+                      seed = 123,
+                      max.time = 1,
+                      max.iter = Inf
+                      #nudge_y = 0.1,
+                      #segment.curvature = -0.15
+                      #segment.ncp = 3,
+                      #segment.angle = 5
+      ) +
+      theme_bw() +
+      xlab('Activity Score') +
+      ylab(parse(text = '-log[10]~(P[Bootstrap])')) +
+      labs(title = plotTitle, subtitle = parse(text = paste0('italic(n)==',n,'~Synergistic~Drug~Combinations'))) +
+      xlim(c(0, max(df$sActivity))) +
+      theme(plot.title = element_text(face = 2), plot.subtitle = element_text(size = 7))
+    
+  }
+  
+  
   return(oPlot)
 }
 
