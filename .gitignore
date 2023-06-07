@@ -5,7 +5,6 @@ Data/GSE176078_Wu_etal_2021_BRCA_scRNASeq.tar.gz
 Data/GSM4285803_scRNA_metaInfo.csv
 Data/GSM4285803_scRNA_RawCounts.csv
 Data/hsaENSEMBL-GENES.txt
-Data/input_tumorComposition.rds
 Data/MCF7.csv
 Data/'Original screen_All tissues_fitted data.csv'
 Data/RAW.UMI.counts.BC.cell.lines.rds
